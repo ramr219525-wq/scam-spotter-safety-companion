@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { ShieldCheck, AlertTriangle, ShieldAlert } from "lucide-react";
 import { SiteLayout } from "@/components/SiteLayout";
 import { analyze, type Result } from "@/lib/detect";
@@ -28,10 +28,16 @@ function Detect() {
   const [url, setUrl] = useState("");
   const [res, setRes] = useState<Result | null>(null);
   const [err, setErr] = useState("");
+  const messageInput = useRef<HTMLTextAreaElement>(null);
 
   const run = (e: FormEvent) => {
     e.preventDefault();
-    if (!msg.trim() && !url.trim()) { setErr("Please paste a message or enter a URL."); setRes(null); return; }
+    if (!msg.trim() && !url.trim()) {
+      setErr("Please paste a message or enter a URL.");
+      setRes(null);
+      messageInput.current?.focus();
+      return;
+    }
     setErr(""); setRes(analyze(msg, url));
   };
   const s = res ? style[res.level] : null;
@@ -42,33 +48,51 @@ function Detect() {
         <h1 className="font-display text-4xl font-bold">Check for Online Scams</h1>
         <p className="mt-2 text-muted-foreground">Demo rule-based checker — results are guidance, not a guarantee.</p>
         <form onSubmit={run} className="card-panel mt-8 space-y-5">
-          <label className="block">
-            <span className="text-sm font-semibold">Suspicious message (SMS, email, chat)</span>
-            <textarea className="field mt-2 min-h-36" value={msg} onChange={(e) => setMsg(e.target.value)}
-              placeholder="e.g. URGENT: Your bank account is blocked. Share your OTP to verify..." />
-          </label>
-          <label className="block">
-            <span className="text-sm font-semibold">Suspicious website URL</span>
-            <input className="field mt-2" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="e.g. http://secure-login-bank.xyz" />
-          </label>
-          {err && <p className="text-sm text-destructive">{err}</p>}
+          <div>
+            <label htmlFor="suspicious-message" className="text-sm font-semibold">Suspicious message (SMS, email, or chat)</label>
+            <textarea
+              ref={messageInput}
+              id="suspicious-message"
+              className="field mt-2 min-h-36"
+              value={msg}
+              onChange={(e) => setMsg(e.target.value)}
+              aria-describedby={`message-help${err ? " detection-error" : ""}`}
+              placeholder="e.g. URGENT: Your bank account is blocked. Share your OTP to verify..."
+            />
+            <p id="message-help" className="mt-2 text-sm text-muted-foreground">Paste a message to check, or leave blank if you are checking a URL.</p>
+          </div>
+          <div>
+            <label htmlFor="suspicious-url" className="text-sm font-semibold">Suspicious website URL</label>
+            <input
+              id="suspicious-url"
+              type="text"
+              inputMode="url"
+              className="field mt-2"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              aria-describedby={`url-help${err ? " detection-error" : ""}`}
+              placeholder="e.g. http://secure-login-bank.xyz"
+            />
+            <p id="url-help" className="mt-2 text-sm text-muted-foreground">Enter a website address, or leave blank if you are checking a message.</p>
+          </div>
+          {err && <p id="detection-error" className="text-sm text-destructive" role="alert">{err}</p>}
           <div className="flex flex-wrap gap-3">
-            <Button type="submit" size="lg">Analyze Now</Button>
-            <Button type="button" variant="outline" size="lg" onClick={() => { setMsg(""); setUrl(""); setRes(null); setErr(""); }}>Clear</Button>
+            <Button type="submit" size="lg" className="min-h-11">Analyze Now</Button>
+            <Button type="button" variant="outline" size="lg" className="min-h-11" onClick={() => { setMsg(""); setUrl(""); setRes(null); setErr(""); }}>Clear</Button>
           </div>
         </form>
         {res && s && (
-          <div className={`mt-8 rounded-xl border-2 p-6 ${s.cls}`} role="status">
+          <div className={`mt-8 rounded-xl border-2 p-6 ${s.cls}`} role="status" aria-live="polite" aria-atomic="true">
             <div className="flex items-center gap-3">
-              <s.Icon className="h-9 w-9" />
+              <s.Icon className="h-9 w-9" aria-hidden="true" />
               <div>
                 <p className="font-display text-2xl font-bold">{res.level}</p>
                 <p className="text-sm opacity-90">{s.text}</p>
               </div>
             </div>
-            <h3 className="mt-5 font-semibold">Why</h3>
+            <h2 className="mt-5 font-semibold">Why</h2>
             <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">{res.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
-            <h3 className="mt-4 font-semibold">Safety advice</h3>
+            <h2 className="mt-4 font-semibold">Safety advice</h2>
             <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">{res.advice.map((r) => <li key={r}>{r}</li>)}</ul>
           </div>
         )}
