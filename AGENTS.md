@@ -28,3 +28,7 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Project decisions
+
+- Keep the three-page demo lightweight: share one site shell and run transparent rule-based scam checks in the browser, without a backend or real-model claims.
